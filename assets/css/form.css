@@ -1,0 +1,194 @@
+
+
+body {
+    background-image: url(../images/fundo/teste-login.avif);
+    background-size: cover;
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+    
+}
+
+.painel {
+    background-color: rgba(0, 0, 0, 0.723);
+    position: absolute;
+    top: 55%;
+    font-family: "Cinzel", serif;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    padding: 80px;
+    border-radius: 15px;
+    color: #fff;
+}
+
+input {
+    padding: 15px;
+    border: none;
+    font-family: "Cinzel", serif;
+    outline: none;
+    font-size: 15px;
+}
+
+button {
+    background-color: dodgerblue;
+    border: none;
+    margin-top: 10px;
+    font-family: "Cinzel", serif;
+    padding: 15px;
+    width: 100%;
+    border-radius: 10px;
+    color: white;
+    font-size: 15px;
+
+}
+
+button:hover {
+    background-color: deepskyblue;
+    cursor: pointer;
+}
+
+.esqueci {
+    color: #fff;
+    text-decoration: none;
+    font-family: "Cinzel", serif;
+    margin-bottom: 5px;
+}
+
+.esqueci:hover {
+    color: #c3c3c3;
+}
+
+
+
+
+
+/*AQUI TERMINA DO LOGIN E REUTILIZA PARA O FORMULÁRIO*/
+
+
+
+
+
+/* Estilo do fundo escuro da modal */
+.cabecalho {
+    height: auto;
+    background-color: rgb(255, 255, 255);
+    display: flex;
+    flex: 1 1 90vw;
+    border-bottom: 1px solid rgb(26, 25, 25);
+}
+
+.cabecalho .logo {
+    display: flex;
+}
+
+
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    font-family: "Cinzel", serif;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.775);
+    display: none;
+    /* Inicialmente escondido */
+    justify-content: center;
+    align-items: center;
+}
+
+/* Estilo da caixa de alerta modal */
+.modal {
+    background: white;
+    padding: 20px;
+    color: black;
+    font-weight: bold;
+    font-family: "Cinzel", serif;
+    border-radius: 5px;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+    text-align: center;
+}
+
+/* Botão para fechar a modal */
+.close-btn {
+    background: #9e3a3a;
+    color: white;
+    border: none;     
+    font-weight: bold;
+    font-family: "Cinzel", serif;
+    padding: 10px 20px;
+    cursor: pointer;
+    border-radius: 5px;
+}
+
+.close-btn:hover {
+    background: #ff3e3e;
+}
+
+
+
+.box {
+    color: white;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    font-family: "Cinzel", serif;
+    transform: translate(-50%, -50%);
+    background-color: rgba(0, 0, 0, 0.805);
+    padding: 15px;
+    border-radius: 15px;
+    width: 20%;
+}
+
+legend {
+    border: 1px solid dodgerblue;
+    padding: 10px;
+    text-align: center;
+    background-color: dodgerblue;
+    border-radius: 8px;
+}
+
+.inputBox {
+    position: relative;
+    width: 90%;
+}
+
+.inputUser {
+    background: none;
+    border: none;
+    border-bottom: 1px solid white;
+    outline: none;
+    color: white;
+    font-size: 15px;
+    width: 100%;
+    letter-spacing: 2px;
+}
+
+.labelInput {
+    position: absolute;
+    top: 0px;
+    left: 0px;
+    pointer-events: none;
+    transition: .5s;
+}
+
+.inputUser:focus~.labelInput,
+.inputUser:valid~.labelInput {
+    top: -20px;
+    font-size: 12px;
+    color: rgb(47, 150, 252);
+}
+
+#submit {
+    background-image: linear-gradient(to right, rgb(32, 118, 215), rgb(111, 49, 226));
+    width: 100%;
+    border: none;
+    padding: 15px;
+    color: white;
+    font-size: 15px;
+    cursor: pointer;
+    border-radius: 10px;
+}
+
+#submit:hover {
+    background-image: linear-gradient(to right, rgb(0, 80, 172), rgb(80, 19, 195));
+}

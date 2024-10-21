@@ -1,0 +1,23 @@
+body{
+    background: #b3cbff;
+    color: rgb(0, 0, 0);
+    text-align: center;
+}
+.table-bg{
+    background: rgba(0, 0, 0, 0.563);
+    border-radius: 15px 15px 0 0;
+}
+
+.box-search{
+    display: flex;
+    justify-content: center;
+    gap: .1%;
+}
+
+.navbar {
+    background: #fff !important;
+}
+
+.home {
+    background: #00aea3 !important;
+}
