@@ -19,7 +19,11 @@ a {
 }
 
 
-
+.logo  {
+	max-width: 100%;
+	margin-top: -20px;
+	margin-bottom: 40px;
+}
 .copyright-text {
 	text-transform: uppercase;
 }
@@ -131,7 +135,7 @@ a {
 /* Banner Style */
 .banner {
 	margin-top: 50px;
-	background-image: url(../images/banner-bg.jpg);
+	background-image: url(../images/apresentar/banner-bg.jpg);
 	background-size: cover;
 	background-repeat: no-repeat;
 	padding: 150px 0px;
@@ -287,8 +291,8 @@ a {
 }
 .footer .logo img {
 	max-width: 100%;
-	margin-top: 60px;
-	margin-bottom: 40px;
+	margin-top: 80px;
+	margin-bottom: 50px;
 }
 .footer .footer-menu {
 	margin-bottom: 40px;

@@ -12,13 +12,15 @@ if (!empty($_GET['user_id'])) {
             $senha = $user_data['senha'];
             $email = $user_data['email'];
             $admin = $user_data['admin'];
+        
+        
         }
     } else {
-        header('Location: usuario.php');
+        header('Location: usuarios.php');
         exit;
     }
 } else {
-    header('Location: usuario.php');
+    header('Location: usuarios.php');
     exit;
 }
 ?>
@@ -41,7 +43,7 @@ if (!empty($_GET['user_id'])) {
 <body>
     <a href="painel.php">Voltar</a>
     <div class="box">
-        <form action="saveEditADM.php" method="POST">
+        <form action="saveEditAdm.php" method="POST">
             <fieldset>
                 <legend><b>Editar Usuário</b></legend>
                 <br>
