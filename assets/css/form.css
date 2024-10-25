@@ -1,7 +1,7 @@
 
 
 body {
-    background-image: url(../images/fundo/teste-login.avif);
+    background-image: url(../images/fundo/fundo-login\(outro\).jpeg);
     background-size: cover;
         margin: 0;
         padding: 0;
@@ -10,7 +10,7 @@ body {
 }
 
 .painel {
-    background-color: rgba(0, 0, 0, 0.723);
+    background-color: rgba(0, 0, 0, 0.804);
     position: absolute;
     top: 55%;
     font-family: "Cinzel", serif;

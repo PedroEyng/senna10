@@ -2,7 +2,7 @@
 include('config.php');
 session_start();
 
-// Verifique se o email e a senha estão definidos na sessão
+// Verifica se o email e a senha estão definidos na sessão
 if (!isset($_SESSION['email']) || !isset($_SESSION['senha'])) {
     unset($_SESSION['email'], $_SESSION['senha']);
     header('Location: login.html');
@@ -12,7 +12,7 @@ if (!isset($_SESSION['email']) || !isset($_SESSION['senha'])) {
 // Armazena o email do usuário logado
 $logado = $_SESSION['email'];
 
-// Verifique se o usuário é administrador
+// Verifica se o usuário é administrador
 if (isset($_SESSION['admin']) && $_SESSION['admin'] == 1) {
     header('Location: perfil.php');
     exit;
@@ -21,7 +21,7 @@ if (isset($_SESSION['admin']) && $_SESSION['admin'] == 1) {
     exit;
 }
 
-// Se o usuário for um administrador, o restante do código será executado
+// Adiciona um novo produto
 if (isset($_POST['add_product'])) {
     $p_nome = mysqli_real_escape_string($conexao, $_POST['p_nome']);
     $p_preco = mysqli_real_escape_string($conexao, $_POST['p_preco']);
@@ -31,50 +31,58 @@ if (isset($_POST['add_product'])) {
     $p_modelo = mysqli_real_escape_string($conexao, $_POST['p_modelo']);
     $p_descricao = mysqli_real_escape_string($conexao, $_POST['p_descricao']);
 
-    // Insere o produto
-    $insert_query = mysqli_query($conexao, "INSERT INTO `produtos`(produto_nome, preco, imagem, modelo, descricao) VALUES('$p_nome', '$p_preco', '$p_imagem', '$p_modelo', '$p_descricao')");
+    if (isset($_FILES['p_imagem']) && $_FILES['p_imagem']['error'] == 0) {
+        $p_imagem = $_FILES['p_imagem']['name'];
+        $p_imagem_tmp_name = $_FILES['p_imagem']['tmp_name'];
+        $p_imagem_folder = 'assets/images/produtos/' . $p_imagem;
+    } else {
+        $message[] = 'Erro no upload da imagem ou imagem não enviada.';
+    }
+    
+    // Insere o produto no banco
+    $insert_query = mysqli_query($conexao, "INSERT INTO `produtos`(nome_produto, preco, modelo, descricao) VALUES('$p_nome', '$p_preco', '$p_modelo', '$p_descricao')");
 
     if ($insert_query) {
-        // Obter o ID do produto recém-inserido
+        // Obtém o ID do produto recém-inserido
         $produto_id = mysqli_insert_id($conexao);
 
-        // Inserir cores selecionadas
+        // Move a imagem para a pasta de produtos, se o upload foi bem-sucedido
+        if (move_uploaded_file($p_imagem_tmp_name, $p_imagem_folder)) {
+            // Insere o caminho da imagem na tabela `imagem_produtos`
+            $insert_image_query = mysqli_query($conexao, "INSERT INTO `imagem_produtos`(produto_id, caminho_imagem) VALUES('$produto_id', '$p_imagem_folder')");
+            $message[] = $insert_image_query ? 'Produto e imagem adicionados com sucesso' : 'Produto adicionado, mas falha ao registrar a imagem';
+        } else {
+            $message[] = 'Produto adicionado, mas falha ao mover a imagem';
+        }
+
+        // Insere as cores selecionadas
         if (isset($_POST['p_cores'])) {
             foreach ($_POST['p_cores'] as $cor_id) {
                 mysqli_query($conexao, "INSERT INTO produto_cores (produto_id, cor_id) VALUES ('$produto_id', '$cor_id')");
             }
         }
 
-        // Inserir tamanhos selecionados
+        // Insere os tamanhos selecionados
         if (isset($_POST['p_tamanhos'])) {
             foreach ($_POST['p_tamanhos'] as $tamanho_id) {
                 mysqli_query($conexao, "INSERT INTO produto_tamanhos (produto_id, tamanho_id) VALUES ('$produto_id', '$tamanho_id')");
             }
-        }
-
-        // Mover a imagem para a pasta de produtos, se o upload foi bem-sucedido
-        if (move_uploaded_file($p_imagem_tmp_name, $p_imagem_folder)) {
-            $message[] = 'Produto adicionado com sucesso';
-        } else {
-            $message[] = 'Produto adicionado, mas falha ao mover a imagem';
         }
     } else {
         $message[] = 'Não foi possível adicionar o produto';
     }
 }
 
+// Exclui um produto
 if (isset($_GET['delete'])) {
     $delete_id = mysqli_real_escape_string($conexao, $_GET['delete']);
     $delete_query = mysqli_query($conexao, "DELETE FROM `produtos` WHERE produto_id = $delete_id");
-    if ($delete_query) {
-        $message[] = 'O produto foi excluído';
-    } else {
-        $message[] = 'O produto não pôde ser excluído';
-    }
+    $message[] = $delete_query ? 'O produto foi excluído' : 'O produto não pôde ser excluído';
     header('location:estoque.php');
     exit;
 }
 
+// Atualiza um produto
 if (isset($_POST['update_product'])) {
     $update_p_produto_id = mysqli_real_escape_string($conexao, $_POST['update_p_produto_id']);
     $update_p_nome = mysqli_real_escape_string($conexao, $_POST['update_p_nome']);
@@ -100,6 +108,8 @@ if (isset($_POST['update_product'])) {
     exit;
 }
 ?>
+
+
 
 <!DOCTYPE html>
 <html lang="pt-br">
@@ -140,16 +150,6 @@ if (isset($_POST['update_product'])) {
                 <input type="number" name="p_preco" min="0" placeholder="Preço do produto" class="box" required>
                 <input type="file" name="p_imagem" accept="image/png, image/jpg, image/jpeg" class="box" required>
 
-                <label for="cores">Selecione as cores:</label>
-                <select name="p_cores[]" multiple class="box">
-                    <?php
-                    $cores_query = mysqli_query($conexao, "SELECT * FROM cores");
-                    while ($row = mysqli_fetch_assoc($cores_query)) {
-                        echo "<option value='" . $row['cor_id'] . "'>" . $row['nome_cor'] . "</option>";
-                    }
-                    ?>
-                </select>
-
                 <label for="tamanhos">Selecione os tamanhos:</label>
                 <select name="p_tamanhos[]" multiple class="box">
                     <?php
@@ -172,27 +172,32 @@ if (isset($_POST['update_product'])) {
                 <thead>
                     <th>Imagem do produto</th>
                     <th>Nome do produto</th>
+                    <th>Tamanho</th>
                     <th>Modelo</th>
+                    <th>Descrição</th>
                     <th>Preço</th>
                     <th>Ação</th>
                 </thead>
                 <tbody>
                     <?php
-                    $select_products = mysqli_query($conexao, "SELECT * FROM produtos");
-                    while ($row = mysqli_fetch_assoc($select_products)) {
-                        $produto_id = $row['produto_id'];
-                        echo "<tr>
-                            <td><img src='assets/images/produtos/" . $row['imagem'] . "' alt=''></td>
-                            <td>" . $row['produto_nome'] . "</td>
-                            <td>" . $row['modelo'] . "</td>
-                            <td>R$" . number_format($row['preco'], 2, ',', '.') . "</td>
-                            <td>
-                                <a href='estoque.php?edit=$produto_id' class='delete-btn'><i class='fas fa-trash'></i>Deletar</a>
-                              
-                                <a href='estoque.php?delete=$produto_id' class='option-btn' onclick='return confirm(`Tem certeza que deseja excluir este produto?`);'><i class='fas fa-edit'></i> Editar</a>
-                            </td>
-                        </tr>";
-                    }
+              $select_products = mysqli_query($conexao, "SELECT p.*, i.caminho_imagem FROM produtos p LEFT JOIN imagem_produtos i ON p.produto_id = i.produto_id");
+              while ($row = mysqli_fetch_assoc($select_products)) {
+                $produto_id = $row['produto_id'];
+                $imagem = $row['caminho_imagem']; // A variável $imagem agora recebe o caminho da imagem
+                echo "<tr>
+                    <td><img style='width:200px;' src='" . $imagem . "' alt=''></td> <!-- Certifique-se de que o caminho está correto -->
+                    <td>" . $row['nome_produto'] . "</td>
+                    <td>" . $row['tamanho_id'] . "</td>
+                    <td>" . $row['modelo'] . "</td>
+                    <td>" . $row['descricao'] . "</td>
+                    <td>R$" . number_format($row['preco'], 2, ',', '.') . "</td>
+                    <td>
+                        <a href='estoque.php?edit=$produto_id' class='delete-btn'><i class='fas fa-trash'></i>Deletar</a>
+                        <a href='estoque.php?delete=$produto_id' class='option-btn' onclick='return confirm(`Tem certeza que deseja excluir este produto?`);'><i class='fas fa-edit'></i> Editar</a>
+                    </td>
+                </tr>";
+            }
+            
                     ?>
                 </tbody>
             </table>
@@ -204,13 +209,19 @@ if (isset($_POST['update_product'])) {
 
          if (isset($_GET['edit'])) {
             $edit_id = $_GET['edit'];
+
+            
+
             $edit_query = mysqli_query($conexao, "SELECT * FROM `produtos` WHERE produto_id = $edit_id");
             if (mysqli_num_rows($edit_query) > 0) {
                while ($fetch_edit = mysqli_fetch_assoc($edit_query)) {
+
+                
                   ?>
 
                   <form action="" method="post" enctype="multipart/form-data">
-                     <img src="assets/images/produtos<?php echo $fetch_edit['imagem']; ?>" height="200" alt="">
+                  <img src="assets/images/produtos/<?php echo $fetch_edit['caminho_imagem']; ?>" height="200" alt="">
+
                      <input type="hidden" name="update_p_produto_id" value="<?php echo $fetch_edit['produto_id']; ?>">
 
                      <input type="text" class="box" required name="update_p_nome"
