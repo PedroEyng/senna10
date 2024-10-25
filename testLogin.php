@@ -15,7 +15,7 @@ if (isset($_POST['submit']) && !empty($_POST['email']) && !empty($_POST['senha']
         // Se não encontrar o usuário, redireciona para a página de login
         unset($_SESSION['email']);
         unset($_SESSION['senha']);
-        header('Location: indexLogado.html');
+        header('Location: login.html');
         exit(); // Encerra o script após o redirecionamento
     } else {
         // Se encontrar o usuário, obtém os dados
