@@ -131,6 +131,10 @@ section{
    color:var(--white);
 }
 
+ .navbar {
+   background: #0d9fe9c8 !important;
+}
+
 .header .flex .navbar a{
    margin-left: 2rem;
    font-size: 2rem;
