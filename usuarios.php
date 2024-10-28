@@ -1,6 +1,42 @@
 <?php
 session_start();
 include_once('config.php');
+
+// Verifica se o usuário está logado
+if (!isset($_SESSION['email'])) {
+    // Se não estiver logado, redireciona para a página de login
+    header('Location: login.html');
+    exit;
+}
+
+// Atribui o e-mail do usuário logado a uma variável
+$logado = $_SESSION['email'];
+
+// Busca o nome do usuário e a permissão no banco de dados
+$sql = "SELECT * FROM user WHERE email = ? LIMIT 1";
+$stmtUser = $conexao->prepare($sql);
+$stmtUser->bind_param("s", $logado);
+$stmtUser->execute();
+$resultUser = $stmtUser->get_result();
+
+if ($resultUser->num_rows > 0) {
+    $row = $resultUser->fetch_assoc();
+    $user_Id = $row['user_id']; // ID do usuário
+    $nomeUsuario = htmlspecialchars($row['user_nome']);
+    $isAdmin = $row['is_admin']; // Supondo que este campo exista
+} else {
+    // Se não encontrar o usuário, encerra a sessão e redireciona
+    session_destroy();
+    header('Location: login.html');
+    exit;
+}
+
+// Verifica se o usuário é administrador
+if ($isAdmin != 1) {
+    // Se não for administrador, redireciona para a página inicial ou outra página
+    header('Location: perfil.php'); // Altere para a página desejada
+    exit;
+}
 // print_r($_SESSION);
 if ((!isset($_SESSION['email']) == true) and (!isset($_SESSION['senha']) == true)) {
     unset($_SESSION['email']);
@@ -117,7 +153,7 @@ $result = $conexao->query($sql);
     });
 
     function searchData() {
-        window.location = 'users.php?search=' + search.value;
+        window.location = 'usuarios.php?search=' + search.value;
     }
 </script>
 </html>

@@ -42,7 +42,9 @@
     <link rel="shortcut icon" href="assets/images/icones/icone.png" type="image/x-icon">
 </head>
 <body>
-    <a href="painel.php">Voltar</a>
+    <header class="cabecalho">
+    <a href="perfil.php"><img src="assets/images/icones/header-logo.png" alt=""></a>
+    </header>
     <div class="box">
         <form action="saveEdit.php" method="POST">
             <fieldset>
