@@ -1,86 +1,141 @@
 <?php
-include('config.php');
+include("config.php");
 session_start();
-
-// Verifica se o usuário está logado
-if (!isset($_SESSION['email'])) {
-    // Se não estiver logado, redireciona para a página de login
+// Verificação e redirecionamento
+if (!isset($_SESSION['email']) || !isset($_SESSION['senha'])) {
+    unset($_SESSION['email']);
+    unset($_SESSION['senha']);
     header('Location: login.html');
     exit;
 }
 
-// Atribui o e-mail do usuário logado a uma variável
-$logado = $_SESSION['email'];
+// Autenticação do usuário
+$email = $_SESSION['email'];
+$senha = $_SESSION['senha'];
+$stmt = $conexao->prepare("SELECT * FROM user WHERE email = ? AND senha = ?");
+$stmt->bind_param("ss", $email, $senha);
+$stmt->execute();
+$result = $stmt->get_result();
 
-// Busca o nome do usuário e a permissão no banco de dados
-$sql = "SELECT * FROM user WHERE email = ? LIMIT 1";
-$stmtUser = $conexao->prepare($sql);
-$stmtUser->bind_param("s", $logado);
-$stmtUser->execute();
-$resultUser = $stmtUser->get_result();
-
-if ($resultUser->num_rows > 0) {
-    $row = $resultUser->fetch_assoc();
-    $user_Id = $row['user_id']; // ID do usuário
-    $nomeUsuario = htmlspecialchars($row['user_nome']);
-    $isAdmin = $row['is_admin']; // Supondo que este campo exista
-} else {
-    // Se não encontrar o usuário, encerra a sessão e redireciona
-    session_destroy();
-    header('Location: login.html');
-    exit;
-}
-
-// Verifica se o usuário é administrador
-if ($isAdmin != 1) {
-    // Se não for administrador, redireciona para a página inicial ou outra página
-    header('Location: perfil.php'); // Altere para a página desejada
-    exit;
-}
-// Adiciona um novo produto
-// Adiciona um novo produto
-if (isset($_POST['add_product'])) {
-    $p_nome = mysqli_real_escape_string($conexao, $_POST['p_nome']);
-    $p_preco = mysqli_real_escape_string($conexao, $_POST['p_preco']);
-    $p_modelo = mysqli_real_escape_string($conexao, $_POST['p_modelo']);
-    $p_descricao = mysqli_real_escape_string($conexao, $_POST['p_descricao']);
-
-    // Insere o produto no banco
-    $insert_query = mysqli_query($conexao, "INSERT INTO `produtos`(produto_nome, preco, modelo, descricao) VALUES('$p_nome', '$p_preco', '$p_modelo', '$p_descricao')");
-
-    if ($insert_query) {
-        $produto_id = mysqli_insert_id($conexao);
-
-        // Processa até quatro imagens, se enviadas
-        for ($i = 1; $i <= 4; $i++) {
-            if (!empty($_FILES["p_imagem$i"]["name"])) {
-                $image_name = $_FILES["p_imagem$i"]["name"];
-                $image_tmp_name = $_FILES["p_imagem$i"]["tmp_name"];
-                $image_folder = 'assets/images/produtos/' . $image_name;
-
-                if (move_uploaded_file($image_tmp_name, $image_folder)) {
-                    $insert_image_query = mysqli_query($conexao, "INSERT INTO `imagem_produtos`(produto_id, caminho_imagem) VALUES('$produto_id', '$image_folder')");
-                    if (!$insert_image_query) {
-                        $message[] = 'Produto adicionado, mas falha ao registrar uma das imagens';
-                    }
-                } else {
-                    $message[] = 'Erro no upload de uma das imagens';
-                }
-            }
+if ($result->num_rows > 0) {
+    $row = $result->fetch_assoc();
+    if ($row['admin'] == 1) {
+        if (basename($_SERVER['PHP_SELF']) !== 'estoque.php') {
+            header('Location: estoque.php');
+            exit;
         }
-
-        // Insere os tamanhos selecionados
-        if (isset($_POST['p_tamanhos'])) {
-            foreach ($_POST['p_tamanhos'] as $tamanho_id) {
-                mysqli_query($conexao, "INSERT INTO tamanho_produto (produto_id, tamanho_id) VALUES ('$produto_id', '$tamanho_id')");
-            }
-        }
-
-        $message[] = 'Produto e imagens adicionados com sucesso';
     } else {
-        $message[] = 'Não foi possível adicionar o produto';
+        if (basename($_SERVER['PHP_SELF']) !== 'perfil.php') {
+            header('Location: perfil.php');
+            exit;
+        }
+    }
+} else {
+    header('Location: login.html');
+    exit;
+}
+
+// Processamento do update_product
+if (isset($_POST['update_product'])) {
+    $update_p_produto_id = $_POST['update_p_produto_id'];
+    $update_p_nome_produto = $_POST['update_p_nome'];
+    $update_p_preco = $_POST['update_p_preco'];
+    $update_p_modelo = $_POST['update_p_modelo'];
+    $update_p_descricao = $_POST['update_p_descricao'];
+    $update_p_tamanhos = $_POST['update_p_tamanhos'];
+
+    // Atualizar o produto no banco de dados
+    $update_query = $conexao->prepare("UPDATE `produtos` SET produto_nome = ?, preco = ?, modelo = ?, descricao = ? WHERE produto_id = ?");
+    $update_query->bind_param("sdssi", $update_p_nome_produto, $update_p_preco, $update_p_modelo, $update_p_descricao, $update_p_produto_id);
+    if ($update_query->execute()) {
+        // Atualizar tamanhos do produto
+        // Excluir tamanhos antigos
+        $delete_sizes_query = $conexao->prepare("DELETE FROM tamanho_produto WHERE produto_id = ?");
+        $delete_sizes_query->bind_param("i", $update_p_produto_id);
+        $delete_sizes_query->execute();
+
+        // Inserir tamanhos novos
+        foreach ($update_p_tamanhos as $tamanho_id) {
+            $insert_size_query = $conexao->prepare("INSERT INTO tamanho_produto (produto_id, tamanho_id) VALUES (?, ?)");
+            $insert_size_query->bind_param("ii", $update_p_produto_id, $tamanho_id);
+            $insert_size_query->execute();
+        }
+
+        $message[] = 'Produto e tamanhos atualizados com sucesso';
+        header('location:estoque.php');
+        exit;
+    } else {
+        $message[] = 'Não foi possível atualizar o produto';
     }
 }
+
+
+// Carregar dados do produto ao editar
+$product_data = null;
+$tamanhos_atual = [];
+if (isset($_GET['edit'])) {
+    $edit_id = $_GET['edit'];
+    
+    // Carregar os dados do produto
+    $product_query = $conexao->prepare("SELECT * FROM produtos WHERE produto_id = ?");
+    $product_query->bind_param("i", $edit_id);
+    $product_query->execute();
+    $product_data = $product_query->get_result()->fetch_assoc();
+    
+    // Carregar tamanhos atribuídos ao produto
+    $tamanhos_query = $conexao->prepare("SELECT t.tamanho_id FROM tamanho_produto tp JOIN tamanhos t ON tp.tamanho_id = t.tamanho_id WHERE tp.produto_id = ?");
+    $tamanhos_query->bind_param("i", $edit_id);
+    $tamanhos_query->execute();
+    $tamanhos_result = $tamanhos_query->get_result();
+    
+    // Armazenar tamanhos atribuídos ao produto
+    while ($row = $tamanhos_result->fetch_assoc()) {
+        $tamanhos_atual[] = $row['tamanho_id'];
+    }
+}
+?>
+
+<!-- HTML - Formulário de edição -->
+<?php if ($product_data): ?>
+    <div class="overlay" onclick="document.querySelector('.overlay').style.display='none'; document.querySelector('.edit-form-container').style.display='none'"></div>
+    <div class="edit-form-container">
+        <h3>Editar Produto</h3>
+        <form action="" method="post" enctype="multipart/form-data">
+            <input type="hidden" name="update_p_produto_id" value="<?php echo htmlspecialchars($edit_id); ?>">
+            <input type="text" name="update_p_nome" value="<?php echo htmlspecialchars($product_data['produto_nome']); ?>" placeholder="Nome do produto" required>
+            <br>
+            <input type="number" name="update_p_preco" value="<?php echo htmlspecialchars($product_data['preco']); ?>" placeholder="Preço do produto" required>
+           <br>
+            <input type="text" name="update_p_modelo" value="<?php echo htmlspecialchars($product_data['modelo']); ?>" placeholder="Modelo do produto" required>
+           <br>
+            <textarea name="update_p_descricao" placeholder="Descrição do produto"><?php echo htmlspecialchars($product_data['descricao']); ?></textarea>
+           <br>
+           
+            <label for="tamanhos">Selecione os tamanhos:</label><br>
+            <select name="update_p_tamanhos[]" multiple class="box">
+                <?php
+                // Carregar tamanhos disponíveis
+                $tamanhos_query = mysqli_query($conexao, "SELECT * FROM tamanhos");
+                while ($row = mysqli_fetch_assoc($tamanhos_query)) {
+                    $selected = in_array($row['tamanho_id'], $tamanhos_atual) ? 'selected' : '';
+                    echo "<option value='" . htmlspecialchars($row['tamanho_id'], ENT_QUOTES) . "' $selected>" . htmlspecialchars($row['tamanho'], ENT_QUOTES) . "</option>";
+                }
+                ?>
+            </select>
+            <br>
+           
+            <button type="submit" name="update_product">Atualizar Produto</button>
+            <br><br>
+            <button type="button" onclick="document.querySelector('.overlay').style.display='none'; document.querySelector('.edit-form-container').style.display='none'">Fechar</button>
+        </form>
+    </div>
+<?php endif; ?>
+
+
+
+
+<?php
+
 
 
 // Exclui um produto
@@ -91,37 +146,7 @@ if (isset($_GET['delete'])) {
     header('location:estoque.php');
     exit;
 }
-
-// Atualiza um produto
-
-if (isset($_GET['edit'])) {
-    $edit_id = mysqli_real_escape_string($conexao, $_GET['edit']);
-    $product_query = mysqli_query($conexao, "SELECT * FROM produtos WHERE produto_id = '$edit_id'");
-    $product_data = mysqli_fetch_assoc($product_query);
-
-    if ($product_data) {
-        // Renderiza o formulário de edição
-        ?>
-        <div class="edit-form-container" style="display: block; max-width: 600px; margin: 10% auto; padding: 50px; border: 1px solid #ccc; border-radius: 5px;">
-            <h3>Editar Produto</h3>
-            <form action="" method="post" enctype="multipart/form-data">
-                <input type="hidden" name="update_p_produto_id" value="<?php echo htmlspecialchars($edit_id, ENT_QUOTES); ?>">
-                <input type="text" name="update_p_nome" value="<?php echo htmlspecialchars($product_data['produto_nome'], ENT_QUOTES); ?>" placeholder="Nome do produto" class="box" required>
-                <input type="number" name="update_p_preco" min="0" value="<?php echo $product_data['preco']; ?>" placeholder="Preço do produto" class="box" required>
-                <textarea name="update_p_descricao" placeholder="Descrição do produto" class="box" required><?php echo htmlspecialchars($product_data['descricao'], ENT_QUOTES); ?></textarea>
-                <input type="text" name="update_p_modelo" value="<?php echo htmlspecialchars($product_data['modelo'], ENT_QUOTES); ?>" placeholder="Modelo do produto" class="box" required>
-                
-                <input type="file" name="update_p_imagem" accept="image/png, image/jpg, image/jpeg" class="box">
-                
-                <input type="submit" name="update_product" value="Atualizar Produto" class="btn">
-            </form>
-            <button id="close-edit" class="btn">Fechar</button> <!-- Botão para fechar o formulário -->
-        </div>
-        <?php
-    } else {
-        echo "<p>Produto não encontrado para edição.</p>";
-    }
-}
+ 
 
 
 
@@ -202,10 +227,10 @@ $select_products = mysqli_query($conexao, "
                     <tr>
                         <th>Produto</th>
                         <th>Imagem</th>
-                        <th>Preço</th>
+                        <th>Tamanhos</th>
                         <th>Modelo</th>
                         <th>Descrição</th>
-                        <th>Tamanhos</th>
+                        <th>Preço</th>
                         <th>Ações</th>
                     </tr>
                 </thead>
