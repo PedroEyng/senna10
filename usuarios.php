@@ -1,48 +1,41 @@
 <?php
+include("config.php");
 session_start();
-include_once('config.php');
-
-// Verifica se o usuário está logado
-if (!isset($_SESSION['email'])) {
-    // Se não estiver logado, redireciona para a página de login
-    header('Location: login.html');
-    exit;
-}
-
-// Atribui o e-mail do usuário logado a uma variável
-$logado = $_SESSION['email'];
-
-// Busca o nome do usuário e a permissão no banco de dados
-$sql = "SELECT * FROM user WHERE email = ? LIMIT 1";
-$stmtUser = $conexao->prepare($sql);
-$stmtUser->bind_param("s", $logado);
-$stmtUser->execute();
-$resultUser = $stmtUser->get_result();
-
-if ($resultUser->num_rows > 0) {
-    $row = $resultUser->fetch_assoc();
-    $user_Id = $row['user_id']; // ID do usuário
-    $nomeUsuario = htmlspecialchars($row['user_nome']);
-    $isAdmin = $row['is_admin']; // Supondo que este campo exista
-} else {
-    // Se não encontrar o usuário, encerra a sessão e redireciona
-    session_destroy();
-    header('Location: login.html');
-    exit;
-}
-
-// Verifica se o usuário é administrador
-if ($isAdmin != 1) {
-    // Se não for administrador, redireciona para a página inicial ou outra página
-    header('Location: perfil.php'); // Altere para a página desejada
-    exit;
-}
-// print_r($_SESSION);
-if ((!isset($_SESSION['email']) == true) and (!isset($_SESSION['senha']) == true)) {
+// Verificação e redirecionamento
+if (!isset($_SESSION['email']) || !isset($_SESSION['senha'])) {
     unset($_SESSION['email']);
     unset($_SESSION['senha']);
-    header('Location: login.php');
+    header('Location: login.html');
+    exit;
 }
+
+// Autenticação do usuário
+$email = $_SESSION['email'];
+$senha = $_SESSION['senha'];
+$stmt = $conexao->prepare("SELECT * FROM user WHERE email = ? AND senha = ?");
+$stmt->bind_param("ss", $email, $senha);
+$stmt->execute();
+$result = $stmt->get_result();
+
+if ($result->num_rows > 0) {
+    $row = $result->fetch_assoc();
+    if ($row['admin'] == 1) {
+        if (basename($_SERVER['PHP_SELF']) !== 'usuarios.php') {
+            header('Location: usuarios.php');
+            exit;
+        }
+    } else {
+        if (basename($_SERVER['PHP_SELF']) !== 'perfil.php') {
+            header('Location: perfil.php');
+            exit;
+        }
+    }
+} else {
+    header('Location: login.html');
+    exit;
+}
+
+
 $logado = $_SESSION['email'];
 if (!empty($_GET['search'])) {
     $data = $_GET['search'];

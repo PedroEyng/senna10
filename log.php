@@ -14,13 +14,13 @@ $email = $_SESSION['email'];
 $senha = $_SESSION['senha'];
 
 // Usa prepared statement para prevenir SQL Injection
-$stmt = $conexao->prepare("SELECT * FROM user WHERE email = ? AND senha = ?"); // Inclui 'nome'
+$stmt = $conexao->prepare("SELECT * FROM user WHERE email = ? AND senha = ?");
 $stmt->bind_param("ss", $email, $senha);
 $stmt->execute();
-$result = $stmt->get_result();
+$result_user = $stmt->get_result();
 
-if ($result->num_rows > 0) {
-   $row = $result->fetch_assoc();
+if ($result_user->num_rows > 0) {
+   $row = $result_user->fetch_assoc();
    $usernome = $row['user_nome']; // Define o nome do usuário
 
    // Verifica se o usuário é administrador
@@ -40,21 +40,34 @@ if ($result->num_rows > 0) {
    exit;
 }
 
+// Consulta SQL para exibir os pedidos com o nome do usuário
 if (!empty($_GET['search'])) {
     $data = $_GET['search'];
-    $sql = "SELECT o.*, p.nome AS produto_nome 
+    $sql = "SELECT o.*, p.produto_nome AS produto_nome, u.user_nome AS user_nome 
             FROM orders o 
-            JOIN products p ON o.product_id = p.id 
-            WHERE o.order_id LIKE '%$data%' OR p.nome LIKE '%$data%' 
+            JOIN produtos p ON o.produto_id = p.produto_id 
+            JOIN user u ON o.user_id = u.user_id 
+            WHERE o.order_id LIKE '%$data%' OR p.produto_nome LIKE '%$data%' 
             ORDER BY o.order_id DESC";
 } else {
-    $sql = "SELECT o.*, p.nome AS produto_nome 
+    $sql = "SELECT o.*, p.produto_nome AS produto_nome, u.user_nome AS user_nome 
             FROM orders o 
-            JOIN products p ON o.product_id = p.id 
+            JOIN produtos p ON o.produto_id = p.produto_id 
+            JOIN user u ON o.user_id = u.user_id 
             ORDER BY o.order_id DESC";
 }
 
+$result_orders = $conexao->query($sql);
 
+// Consulta para calcular o valor total de todos os pagamentos
+$sql_total = "SELECT SUM(total) AS total_pagamentos FROM orders";
+$result_total = $conexao->query($sql_total);
+$total = 0;
+
+if ($result_total && $result_total->num_rows > 0) {
+    $row_total = $result_total->fetch_assoc();
+    $total = $row_total['total_pagamentos'];
+}
 ?>
 <!DOCTYPE html>
 <html lang="pt-br">
@@ -65,8 +78,9 @@ if (!empty($_GET['search'])) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link href="https://fonts.googleapis.com/css?family=Roboto:100,300,400,500,700" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="assets/css/style-admin.css"> <link rel="stylesheet" href="assets/css/orders.css">
-    <title>SISTEMA | GN - Orders</title>
+    <link rel="stylesheet" href="assets/css/style-admin.css"> 
+    <link rel="stylesheet" href="assets/css/orders.css">
+    <title>SENNA | LOGS DE COMPRAS</title>
 </head>
 
 <body>
@@ -87,46 +101,43 @@ if (!empty($_GET['search'])) {
     </nav>
     <br>
     <?php
-    echo "<h1>Bem vindo <u>$usernome</u></h1>"; // Agora deve funcionar sem erro
+    echo "<h1 style='justify-self:center;'>Bem vindo <u>$usernome</u></h1>";
+    echo "<br>";
+    echo "<h4 style='justify-self:center;'>Valor total de todos os pagamentos: R$ <u>$total</u></h4>";
     ?>
+
     <br>
-    <div class="box-search">
-        <input type="search" class="form-control w-25" placeholder="Pesquisar" id="pesquisar">
-        <button onclick="searchData()" class="btn btn-primary">
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-search"
-                viewBox="0 0 16 16">
-                <path
-                    d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0z" />
-            </svg>
-        </button>
-    </div>
-    <div class="m-5">
+   
+    <div class="m-5" style="font-size:1pc;">
         <table class="table text-white table-bg">
             <thead>
                 <tr>
                     <th scope="col">#</th>
+                    <th scope="col">Usuário</th>
                     <th scope="col">Produto</th>
                     <th scope="col">Quantidade</th>
                     <th scope="col">Preço Total</th>
                     <th scope="col">Data</th>
-                    <th scope="col">Status</th>
                 </tr>
             </thead>
             <tbody>
     <?php
-    while ($order_data = mysqli_fetch_assoc($result)) {
-        echo "<tr>";
-        echo "<td>" . $order_data['order_id'] . "</td>";
-        echo "<td>" . $order_data['produto_nome'] . "</td>"; // Esta linha já foi ajustada
-        echo "<td>" . $order_data['quantidade'] . "</td>";
-        echo "<td>R$ " . $order_data['total'] . "</td>";
-        echo "<td>" . $order_data['data_order'] . "</td>";
-        echo "<td>" . $order_data['status'] . "</td>";
-        echo "</tr>";
+    if ($result_orders && $result_orders->num_rows > 0) {
+        while ($order_data = $result_orders->fetch_assoc()) {
+            echo "<tr>";
+            echo "<td>" . $order_data['order_id'] . "</td>";
+            echo "<td>" . $order_data['user_nome'] . "</td>"; // Nome do usuário
+            echo "<td>" . $order_data['produto_nome'] . "</td>";
+            echo "<td>" . $order_data['quantidade'] . "</td>";
+            echo "<td>R$ " . $order_data['total'] . "</td>";
+            echo "<td>" . $order_data['created_at'] . "</td>";
+            echo "</tr>";
+        }
+    } else {
+        echo "<tr><td colspan='7'>Nenhum pedido encontrado.</td></tr>";
     }
     ?>
-</tbody>
-
+            </tbody>
         </table>
     </div>
 </body>
