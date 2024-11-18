@@ -1,5 +1,15 @@
 <?php
 session_start();
+session_start();  // Certifique-se de chamar session_start() no início
+
+// Destruir a sessão anterior (caso haja alguma sessão de outro usuário ativa)
+session_unset();
+session_destroy();
+
+// Inicializar uma nova sessão
+session_start();
+$_SESSION['user_id'] = $row['user_id'];  // Defina o ID correto do usuário
+
 if (isset($_POST['submit']) && !empty($_POST['email']) && !empty($_POST['senha'])) {
     // Inclui a configuração do banco de dados
     include_once('config.php');

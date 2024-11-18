@@ -78,7 +78,7 @@ começou a brincadeira
             <a class="nav-link" href="about.html">Sobre nós</a>
           </li>
           <li class="nav-item">
-            <a class="nav-link" href="contact.html">Contato</a>
+          <a class="nav-link" href="mailto:pedro.senna.fernandes@escola.pr.gov.br">Contato</a>
           </li>
           <li class="nav-item">
             <a class="nav-link" href="sair.php">Logout</a>
@@ -105,9 +105,6 @@ começou a brincadeira
               </a>
             </li>
 
-            <li class="nav-item">
-              <a class="btn btn-outline-light" href="favoritos.php">Seus Favoritos</a>
-            </li>
           </ul>
       </form>
     </div>
