@@ -2,25 +2,28 @@
 session_start(); // Inicia a sessão, deve ser a primeira linha do arquivo
 @include 'config.php';
 
-$select_cart = mysqli_query($conexao, 
-"SELECT c.produto_id, c.quantidade, c.preco, c.tamanho, p.produto_nome AS produto_nome 
- FROM carrinho AS c
- JOIN produtos AS p
- ON c.produto_id = p.produto_id"
-) or die('Query failed: ' . mysqli_error($conexao));
-
+// Verifica se o formulário foi enviado
 if (isset($_POST['order_btn'])) {
     // Verifica se o usuário está logado
     if (!isset($_SESSION['user_id'])) {
         die('Usuário não autenticado!');
     }
+    
     // Obtém o ID do usuário logado
     $user_id = $_SESSION['user_id'];
 
     // Dados do pedido
     $email = $_POST['email'];
-    $pagamento = $_POST['pagamento'];
+    $pagamento = $_POST['pagamento']; // Método de pagamento
     $endereco = $_POST['endereco'];
+
+    // Exibe os dados do formulário para depuração (remover depois de testar)
+    var_dump($_POST);  // Verifique se o 'pagamento' está sendo passado corretamente
+
+    // Verifica se o método de pagamento foi selecionado
+    if (empty($pagamento)) {
+        die('Método de pagamento não selecionado.');
+    }
 
     // Selecione os produtos no carrinho
     $select_cart = mysqli_query($conexao, 
@@ -33,22 +36,38 @@ if (isset($_POST['order_btn'])) {
     // Calcular o total
     $total = 0;
 
+    // Prepara o statement para inserir os dados no banco
+    $insert_order = $conexao->prepare("INSERT INTO orders (user_id, produto_id, total, quantidade, tamanho, email, endereco, pagamento, created_at) 
+                                       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
+
+    // Verifica se o prepared statement foi criado corretamente
+    if (!$insert_order) {
+        die('Erro ao preparar a consulta: ' . $conexao->error);
+    }
+
     // Loop através dos produtos no carrinho
     if (mysqli_num_rows($select_cart) > 0) {
-        // Insere o pedido na tabela 'orders' para cada item
         $created_at = date('Y-m-d H:i:s'); // Data e hora atual
         while ($fetch_cart = mysqli_fetch_assoc($select_cart)) {
             $produto_id = $fetch_cart['produto_id'];
             $subtotal = $fetch_cart['preco'] * $fetch_cart['quantidade'];
             $total += $subtotal;
             $quantidade = $fetch_cart['quantidade'];
-            $tamanho = $fetch_cart['tamanho'];
 
-            // Inserir cada produto no pedido
-            $insert_order = mysqli_query($conexao, 
-            "INSERT INTO orders (user_id, produto_id, total, quantidade, tamanho, email, endereco, pagamento, created_at) 
-             VALUES ('$user_id', '$produto_id', '$subtotal', '$quantidade', '$tamanho', '$email', '$endereco', '$pagamento', '$created_at')"
-            ) or die('Query failed: ' . mysqli_error($conexao));
+            // Se o tamanho estiver vazio, define um valor padrão
+            $tamanho = !empty($fetch_cart['tamanho']) ? $fetch_cart['tamanho'] : 'Padrão';  // Valor padrão para tamanho
+
+            // Bind parameters para evitar injeção de SQL
+            $insert_order->bind_param("iiidsssss", $user_id, $produto_id, $subtotal, $quantidade, $tamanho, $email, $endereco, $pagamento, $created_at);
+
+            // Executa a inserção no banco de dados
+            if ($insert_order->execute()) {
+                // A execução foi bem-sucedida
+                continue;
+            } else {
+                // Caso haja erro, exibe mensagem
+                die('Erro ao salvar o pedido: ' . $insert_order->error);
+            }
         }
 
         // Limpar o carrinho após a finalização do pedido
@@ -62,6 +81,7 @@ if (isset($_POST['order_btn'])) {
     }
 }
 ?>
+
 
 <!DOCTYPE html>
 <html lang="pt-br">
